@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import './App.css';
 // NOTE: IPFS & Solid client libraries are now loaded from a CDN via script tags.
 
 // --- Ontology "Database" ---
@@ -202,7 +203,6 @@ export default function App() {
     useEffect(() => {
         loadScript('ipfs-http-client-script', 'https://unpkg.com/ipfs-http-client/dist/index.min.js', () => setIsIpfsReady(true));
         loadScript('solid-client-authn-script', 'https://unpkg.com/@inrupt/solid-client-authn-browser/dist/solid-client-authn.bundle.js', () => {
-            // FIX: Use jsdelivr CDN for a more reliable bundle link.
             loadScript('solid-client-script', 'https://cdn.jsdelivr.net/npm/@inrupt/solid-client@1.19.0/dist/solid-client.bundle.js', () => setIsSolidReady(true));
         });
     }, []);
@@ -285,7 +285,7 @@ export default function App() {
         setIsSaving(true);
         showMessage("Saving draft to Solid Pod...", "secondary");
 
-        const { createSolidDataset, createThing, setThing, saveSolidDatasetAt, buildThing, getStringNoLocale } = window.solidClient;
+        const { createSolidDataset, createThing, setThing, saveSolidDatasetAt, buildThing } = window.solidClient;
         const containerUrl = getDraftsContainerUrl(solidSession.webId);
         const draftUrl = `${containerUrl}${encodeURIComponent(tokenName.trim())}.ttl`;
         
@@ -315,8 +315,9 @@ export default function App() {
         showMessage("Loading draft...", "secondary");
         try {
             const resource = await window.solidClient.getSolidDataset(url, { fetch: solidSession.fetch });
-            const thing = await window.solidClient.getThing(resource, url);
-            const dataString = await window.solidClient.getStringNoLocale(thing, "http://www.w3.org/ns/iana/media-types/text/turtle#mediaType");
+            // FIX: Removed incorrect `await` from synchronous solid-client functions
+            const thing = window.solidClient.getThing(resource, url);
+            const dataString = window.solidClient.getStringNoLocale(thing, "http://www.w3.org/ns/iana/media-types/text/turtle#mediaType");
             if (dataString) {
                 const parsedState = JSON.parse(dataString);
                 setFullState(parsedState);
@@ -662,9 +663,18 @@ export default function App() {
                                 </div>
                             </div>
                         )}
+
                     </div>
                 </div>
             </div>
+            
+            {message && (
+                <div className={`fixed bottom-5 right-5 p-4 rounded-lg shadow-2xl text-white ${
+                    message.type === 'success' ? 'bg-green-600' : message.type === 'error' ? 'bg-red-600' : 'bg-gray-600'
+                }`}>
+                    {message.text}
+                </div>
+            )}
         </div>
     );
 }
