@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/semantic-tokens-xec/static/css/main.e6c13ad2.css",
-    "main.js": "/semantic-tokens-xec/static/js/main.bf208851.js",
+    "main.js": "/semantic-tokens-xec/static/js/main.daec43c1.js",
     "static/js/453.7f743a4f.chunk.js": "/semantic-tokens-xec/static/js/453.7f743a4f.chunk.js",
     "index.html": "/semantic-tokens-xec/index.html",
     "main.e6c13ad2.css.map": "/semantic-tokens-xec/static/css/main.e6c13ad2.css.map",
-    "main.bf208851.js.map": "/semantic-tokens-xec/static/js/main.bf208851.js.map",
+    "main.daec43c1.js.map": "/semantic-tokens-xec/static/js/main.daec43c1.js.map",
     "453.7f743a4f.chunk.js.map": "/semantic-tokens-xec/static/js/453.7f743a4f.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.bf208851.js"
+    "static/js/main.daec43c1.js"
   ]
 }
