@@ -1,25 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import './App.css';
 // NOTE: IPFS & Solid client libraries are now loaded from a CDN via script tags.
 
 // --- Ontology "Database" ---
-const initialOntologiesDb = {
+const ontologiesDb = {
     dcterms: {
         name: 'Dublin Core Terms',
         prefix: 'dcterms',
         uri: 'http://purl.org/dc/terms/',
         terms: ['title', 'description', 'creator', 'date', 'identifier', 'publisher', 'rights'],
-    },
-    dct: {
-        name: 'Dublin Core Terms (dct)',
-        prefix: 'dct',
-        uri: 'http://purl.org/dc/terms/',
-        terms: ['title', 'description', 'creator', 'date', 'identifier', 'publisher', 'rights'],
-    },
-    schema: {
-        name: 'Schema.org',
-        prefix: 'schema',
-        uri: 'https://schema.org/',
-        terms: ['Person', 'Organization', 'Product', 'Event', 'name', 'description', 'url'],
     },
     foaf: {
         name: 'Friend of a Friend',
@@ -32,37 +21,7 @@ const initialOntologiesDb = {
         prefix: 'skos',
         uri: 'http://www.w3.org/2004/02/skos/core#',
         terms: ['Concept', 'prefLabel', 'altLabel', 'definition', 'broader', 'narrower'],
-    },
-    prov: {
-        name: 'PROV-O',
-        prefix: 'prov',
-        uri: 'http://www.w3.org/ns/prov#',
-        terms: ['Activity', 'Agent', 'Entity', 'wasGeneratedBy', 'used', 'wasAssociatedWith'],
-    },
-    sioc: {
-        name: 'SIOC',
-        prefix: 'sioc',
-        uri: 'http://rdfs.org/sioc/ns#',
-        terms: ['Post', 'Usergroup', 'has_creator', 'content', 'about'],
-    },
-    doap: {
-        name: 'Description of a Project',
-        prefix: 'doap',
-        uri: 'http://usefulinc.com/ns/doap#',
-        terms: ['Project', 'name', 'homepage', 'developer', 'description', 'repository'],
-    },
-    gr: {
-        name: 'Good Relations',
-        prefix: 'gr',
-        uri: 'http://purl.org/goodrelations/v1#',
-        terms: ['BusinessEntity', 'ProductOrService', 'hasPriceSpecification', 'includes'],
-    },
-    fibo: {
-        name: 'FIBO',
-        prefix: 'fibo',
-        uri: 'https://spec.edmcouncil.org/fibo/ontology/master/latest/',
-        terms: ['FinancialInstrument', 'Currency', 'hasCurrency', 'isIssuedBy'],
-    },
+    }
 };
 
 // --- Helper Components ---
@@ -189,19 +148,21 @@ export default function App() {
     const [tokenTicker, setTokenTicker] = useState('MST');
     const [tokenDecimals, setTokenDecimals] = useState(2);
     const [properties, setProperties] = useState([
-        { id: 1, schema: 'dcterms', property: 'description', value: 'A token with rich, machine-readable metadata.', type: 'literal' },
-        { id: 2, schema: 'foaf', property: 'maker', value: 'https://my-profile.example.com', type: 'uri' },
+        { id: 1, key: 'dcterms:description', value: 'A token with rich, machine-readable metadata.', type: 'literal' },
+        { id: 2, key: 'foaf:maker', value: 'https://my-profile.example.com', type: 'uri' },
     ]);
     const [shapes, setShapes] = useState([]);
     const [activeShapeId, setActiveShapeId] = useState(null);
     const [newShapeName, setNewShapeName] = useState("");
-    
-    // Ontology & Namespace State
-    const [userOntologies, setUserOntologies] = useState({});
-    const [ontologiesDb, setOntologiesDb] = useState(initialOntologiesDb);
-    const [selectedOntologies, setSelectedOntologies] = useState(['dcterms', 'foaf', 'schema']);
-
-    const [prefixes, setPrefixes] = useState(Object.values(initialOntologiesDb).map(o => ({ id: o.prefix, prefix: o.prefix, uri: o.uri, status: 'valid' })));
+    const [selectedOntologies, setSelectedOntologies] = useState(['dcterms', 'foaf']);
+    const [prefixes, setPrefixes] = useState([
+        { id: 'dcterms', prefix: 'dcterms', uri: 'http://purl.org/dc/terms/' },
+        { id: 'foaf', prefix: 'foaf', uri: 'http://xmlns.com/foaf/0.1/' },
+        { id: 'owl', prefix: 'owl', uri: 'http://www.w3.org/2002/07/owl#' },
+        { id: 'rdfs', prefix: 'rdfs', uri: 'http://www.w3.org/2000/01/rdf-schema#' },
+        { id: 'sh', prefix: 'sh', uri: 'http://www.w3.org/ns/shacl#' },
+        { id: 'xsd', prefix: 'xsd', uri: 'http://www.w3.org/2001/XMLSchema#' },
+    ]);
     const [activeVocab, setActiveVocab] = useState([]);
     const [sameAsRelations, setSameAsRelations] = useState([]);
 
@@ -220,7 +181,6 @@ export default function App() {
     // Library Loading State
     const [isIpfsReady, setIsIpfsReady] = useState(false);
     const [isSolidReady, setIsSolidReady] = useState(false);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
 
     const [rdfOutput, setRdfOutput] = useState('');
     const [message, setMessage] = useState(null);
@@ -247,27 +207,7 @@ export default function App() {
         });
     }, []);
 
-    // --- State Serialization ---
-    const getFullState = useCallback(() => ({
-        tokenName, tokenTicker, tokenDecimals, properties, shapes,
-        selectedOntologies, prefixes, sameAsRelations, activeShapeId, newShapeName, userOntologies
-    }), [tokenName, tokenTicker, tokenDecimals, properties, shapes, selectedOntologies, prefixes, sameAsRelations, activeShapeId, newShapeName, userOntologies]);
-
-    const setFullState = (newState) => {
-        setTokenName(newState.tokenName || 'My Semantic Token');
-        setTokenTicker(newState.tokenTicker || 'MST');
-        setTokenDecimals(newState.tokenDecimals || 2);
-        setProperties(newState.properties || []);
-        setShapes(newState.shapes || []);
-        setSelectedOntologies(newState.selectedOntologies || ['dcterms', 'foaf']);
-        setPrefixes(newState.prefixes || []);
-        setSameAsRelations(newState.sameAsRelations || []);
-        setActiveShapeId(newState.activeShapeId || null);
-        setNewShapeName(newState.newShapeName || "");
-        setUserOntologies(newState.userOntologies || {});
-    };
-
-    // --- Solid & Local Storage Data Handling ---
+    // --- Solid Authentication & Data ---
     const getDraftsContainerUrl = (userWebId) => {
         const podUrl = new URL(userWebId);
         podUrl.pathname = '/public/eCashTokenCreator/drafts/';
@@ -276,7 +216,7 @@ export default function App() {
 
     const fetchDrafts = useCallback(async (session) => {
         if (!session?.webId) return;
-        const { getContainedResourceUrls, getStringNoLocale } = window.solidClient;
+        const { getContainedResourceUrls, getSourceUrl, getStringNoLocale } = window.solidClient;
         const containerUrl = getDraftsContainerUrl(session.webId);
         try {
             const draftUrls = await getContainedResourceUrls(containerUrl, { fetch: session.fetch });
@@ -295,22 +235,13 @@ export default function App() {
 
     useEffect(() => {
         if (!isSolidReady) return;
-
         window.solidClientAuthentication.handleIncomingRedirect({ restorePreviousSession: true })
             .then(session => {
-                if (session && session.isLoggedIn) {
+                if (session) {
                     setSolidSession(session);
                     setWebId(session.webId);
                     fetchDrafts(session);
-                    localStorage.removeItem('eCashTokenCreator_localDraft'); // Clear local draft on login
-                } else {
-                    // Load from local storage if not logged in
-                    const localData = localStorage.getItem('eCashTokenCreator_localDraft');
-                    if (localData) {
-                        setFullState(JSON.parse(localData));
-                    }
                 }
-                setIsInitialLoad(false);
             });
     }, [isSolidReady, fetchDrafts]);
 
@@ -330,6 +261,22 @@ export default function App() {
         setDrafts([]);
     };
 
+    const getFullState = () => ({
+        tokenName, tokenTicker, tokenDecimals, properties, shapes,
+        selectedOntologies, prefixes, sameAsRelations
+    });
+
+    const setFullState = (newState) => {
+        setTokenName(newState.tokenName || 'My Semantic Token');
+        setTokenTicker(newState.tokenTicker || 'MST');
+        setTokenDecimals(newState.tokenDecimals || 2);
+        setProperties(newState.properties || []);
+        setShapes(newState.shapes || []);
+        setSelectedOntologies(newState.selectedOntologies || ['dcterms', 'foaf']);
+        setPrefixes(newState.prefixes || []);
+        setSameAsRelations(newState.sameAsRelations || []);
+    };
+
     const handleSaveToPod = async () => {
         if (!solidSession || !tokenName.trim()) {
             showMessage("Please login and provide a token name to save.", "error");
@@ -340,7 +287,7 @@ export default function App() {
 
         const { createSolidDataset, createThing, setThing, saveSolidDatasetAt, buildThing } = window.solidClient;
         const containerUrl = getDraftsContainerUrl(solidSession.webId);
-        const draftUrl = `${containerUrl}${encodeURIComponent(tokenName.trim().replace(/\//g, '-'))}.ttl`;
+        const draftUrl = `${containerUrl}${encodeURIComponent(tokenName.trim())}.ttl`;
         
         const currentState = getFullState();
 
@@ -368,51 +315,36 @@ export default function App() {
         showMessage("Loading draft...", "secondary");
         try {
             const resource = await window.solidClient.getSolidDataset(url, { fetch: solidSession.fetch });
+            // FIX: Removed incorrect `await` from synchronous solid-client functions
             const thing = window.solidClient.getThing(resource, url);
             const dataString = window.solidClient.getStringNoLocale(thing, "http://www.w3.org/ns/iana/media-types/text/turtle#mediaType");
             if (dataString) {
                 const parsedState = JSON.parse(dataString);
                 setFullState(parsedState);
                 showMessage("Draft loaded successfully!", "success");
-            } else { throw new Error("Could not find data in the resource."); }
+            } else {
+                throw new Error("Could not find data in the resource.");
+            }
         } catch (error) {
             console.error("Error loading from Pod:", error);
             showMessage("Failed to load draft.", "error");
         }
     };
 
-    // --- Local Storage Persistence ---
+
+    // --- Vocabulary & Prefix Management ---
     useEffect(() => {
-        // Don't save to local storage if logged in or on initial load
-        if (isInitialLoad || webId) return;
-
-        const currentState = getFullState();
-        localStorage.setItem('eCashTokenCreator_localDraft', JSON.stringify(currentState));
-    }, [getFullState, webId, isInitialLoad]);
-
-
-    // --- Ontology & Vocabulary Management ---
-    useEffect(() => {
-        // Combine built-in and user-defined ontologies
-        setOntologiesDb({ ...initialOntologiesDb, ...userOntologies });
-    }, [userOntologies]);
-
-    useEffect(() => {
-        // Update active vocabulary for autocompletion
-        const allOntologies = { ...initialOntologiesDb, ...userOntologies };
-        const dbVocab = selectedOntologies.flatMap(key => {
-            const onto = allOntologies[key];
+        const newVocab = selectedOntologies.flatMap(key => {
+            const onto = ontologiesDb[key];
             return onto ? onto.terms.map(term => `${onto.prefix}:${term}`) : [];
         });
-        const customPrefixVocab = prefixes.map(p => `${p.prefix}:`);
-        setActiveVocab([...new Set([...dbVocab, ...customPrefixVocab])]);
+        setActiveVocab([...new Set(newVocab)]);
 
-        // Update prefixes list from selected ontologies
-        const prefixesFromOntologies = selectedOntologies.map(key => {
-            const onto = allOntologies[key];
-            return onto ? { id: key, prefix: onto.prefix, uri: onto.uri, status: 'valid' } : null;
-        }).filter(Boolean);
-
+        const prefixesFromOntologies = selectedOntologies.map(key => ({
+            id: key,
+            prefix: ontologiesDb[key].prefix,
+            uri: ontologiesDb[key].uri
+        }));
         setPrefixes(currentPrefixes => {
             const newPrefixes = [...prefixesFromOntologies];
             currentPrefixes.forEach(p => {
@@ -420,16 +352,14 @@ export default function App() {
             });
             return newPrefixes;
         });
-    }, [selectedOntologies, userOntologies]);
-
+    }, [selectedOntologies]);
 
     // --- RDF Generation Logic ---
     const generateRdf = useCallback(() => {
         const prefixLines = prefixes.filter(p => p.prefix && p.uri).map(p => `@prefix ${p.prefix}: <${p.uri}> .`).join('\n');
-        const propertyLines = properties.filter(p => p.schema && p.property && p.value).map(p => {
-            const key = `${p.schema}:${p.property}`;
+        const propertyLines = properties.filter(p => p.key && p.value).map(p => {
             const value = p.type === 'uri' ? `<${p.value}>` : `"${p.value.replace(/"/g, '\\"')}"`;
-            return `  ${key} ${value} ;`;
+            return `  ${p.key} ${value} ;`;
         }).join('\n');
         const sameAsLines = sameAsRelations.filter(r => r.termA && r.termB).map(r => `${r.termA} owl:sameAs ${r.termB} .`).join('\n');
         const tokenDefinition = `<>\n  a <http://slp.dev/ont/v1#Token> ;\n  dcterms:title "${tokenName}" ;\n  <http://slp.dev/ont/v1#ticker> "${tokenTicker}" ;\n${propertyLines}\n.`;
@@ -478,61 +408,8 @@ export default function App() {
             setIsPublishing(false);
         }
     };
-    
-    const handlePropertyChange = (id, field, value) => {
-        setProperties(properties.map(p => p.id === id ? { ...p, [field]: value } : p));
-    };
 
-    const handleAddProperty = () => {
-        setProperties([...properties, {id: Date.now(), schema: 'dcterms', property: '', value: '', type: 'literal'}]);
-    };
-
-    const handleRemoveProperty = (id) => {
-        setProperties(properties.filter(p => p.id !== id));
-    };
-
-    const handleOntologyToggle = (key) => {
-        const isSelected = selectedOntologies.includes(key);
-        if (isSelected) {
-            setSelectedOntologies(current => current.filter(k => k !== key));
-        } else {
-            setSelectedOntologies(current => [...current, key]);
-        }
-    };
-    
-    const handleValidatePrefix = async (id) => {
-        const prefixToValidate = prefixes.find(p => p.id === id);
-        if (!prefixToValidate || !prefixToValidate.uri) {
-            showMessage("Please enter a URI to validate.", "error");
-            return;
-        }
-
-        setPrefixes(current => current.map(p => p.id === id ? { ...p, status: 'validating' } : p));
-
-        try {
-            // NOTE: 'no-cors' mode prevents reading the response, but a successful fetch
-            // indicates the resource is likely reachable. A proxy is needed for a full check.
-            await fetch(prefixToValidate.uri, { mode: 'no-cors' });
-            
-            // If validation is successful, treat it as a new ontology
-            const newOntology = {
-                name: `Custom: ${prefixToValidate.prefix}`,
-                prefix: prefixToValidate.prefix,
-                uri: prefixToValidate.uri,
-                terms: ['term1', 'term2'], // Simulated terms from parsing
-            };
-            setUserOntologies(prev => ({ ...prev, [prefixToValidate.prefix]: newOntology }));
-            setSelectedOntologies(prev => [...new Set([...prev, prefixToValidate.prefix])]);
-
-            setPrefixes(current => current.map(p => p.id === id ? { ...p, status: 'valid' } : p));
-            showMessage(`Namespace '${prefixToValidate.prefix}' validated and added to ontologies.`, "success");
-
-        } catch (error) {
-            setPrefixes(current => current.map(p => p.id === id ? { ...p, status: 'invalid' } : p));
-            showMessage(`Could not reach URI for '${prefixToValidate.prefix}'.`, "error");
-        }
-    };
-
+    const handleOntologyToggle = (key) => setSelectedOntologies(current => current.includes(key) ? current.filter(k => k !== key) : [...current, key]);
     const handleAddSameAs = () => setSameAsRelations([...sameAsRelations, {id: Date.now(), termA: '', termB: ''}]);
     const handleUpdateSameAs = (id, field, value) => setSameAsRelations(sameAsRelations.map(r => r.id === id ? {...r, [field]: value} : r));
     const handleRemoveSameAs = (id) => setSameAsRelations(sameAsRelations.filter(r => r.id !== id));
@@ -553,6 +430,10 @@ export default function App() {
     // --- Render ---
     return (
         <div className="bg-gray-800 text-white min-h-screen font-sans p-4 sm:p-6 lg:p-8">
+            <datalist id="vocab-list">
+                {activeVocab.map(term => <option key={term} value={term} />)}
+            </datalist>
+
             <div className="max-w-7xl mx-auto">
                 <header className="flex justify-between items-center mb-8">
                     <div className="text-left">
@@ -594,13 +475,13 @@ export default function App() {
                     </div>
                 )}
 
-                <div className="space-y-8">
-                    {/* EDITOR PANEL */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* LEFT COLUMN: EDITOR */}
                     <div className="bg-gray-900 p-1 sm:p-2 rounded-lg shadow-lg">
                        <div className="border-b border-gray-700">
                             <nav className="-mb-px flex space-x-2 px-4">
-                                <TabButton onClick={() => setActiveTab('properties')} isActive={activeTab === 'properties'}>1. Properties</TabButton>
-                                <TabButton onClick={() => setActiveTab('rules')} isActive={activeTab === 'rules'}>2. Rules</TabButton>
+                                <TabButton onClick={() => setActiveTab('properties')} isActive={activeTab === 'properties'}>1. Properties & Links</TabButton>
+                                <TabButton onClick={() => setActiveTab('shacl')} isActive={activeTab === 'shacl'}>2. SHACL Rules</TabButton>
                                 <TabButton onClick={() => setActiveTab('ontologies')} isActive={activeTab === 'ontologies'}>3. Ontologies</TabButton>
                                 <TabButton onClick={() => setActiveTab('namespaces')} isActive={activeTab === 'namespaces'}>4. Namespaces</TabButton>
                             </nav>
@@ -619,58 +500,14 @@ export default function App() {
                                     <div>
                                         <h3 className="text-xl font-semibold mb-3 pt-4 text-gray-200">Metadata Properties</h3>
                                         <div className="space-y-3 p-4 bg-gray-800/50 rounded-md">
-                                            {properties.map(prop => {
-                                                const datalistId = `prop-vocab-${prop.id}`;
-                                                const selectedSchemaTerms = ontologiesDb[prop.schema]?.terms || [];
-                                                return (
-                                                    <div key={prop.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                                                        <datalist id={datalistId}>
-                                                            {selectedSchemaTerms.map(term => <option key={term} value={term} />)}
-                                                        </datalist>
-                                                        <div className="md:col-span-3">
-                                                            <Select label="Schema" value={prop.schema} onChange={e => handlePropertyChange(prop.id, 'schema', e.target.value)}>
-                                                                <option value="" disabled>Prefix</option>
-                                                                {prefixes.map(p => <option key={p.id} value={p.prefix}>{p.prefix}</option>)}
-                                                            </Select>
-                                                        </div>
-                                                        <div className="md:col-span-4"><Input label="Property" value={prop.property} onChange={e => handlePropertyChange(prop.id, 'property', e.target.value)} listId={datalistId} /></div>
-                                                        <div className="md:col-span-4"><Input label="Value" value={prop.value} onChange={e => handlePropertyChange(prop.id, 'value', e.target.value)} /></div>
-                                                        <div className="md:col-span-1"><Button variant="danger" onClick={() => handleRemoveProperty(prop.id)}>&times;</Button></div>
-                                                    </div>
-                                                )
-                                            })}
-                                            <Button onClick={handleAddProperty}>Add Property</Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'rules' && (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                        <div className="md:col-span-1 space-y-3">
-                                            <h3 className="text-lg font-semibold text-gray-300">SHACL Shapes</h3>
-                                            <div className="space-y-2">
-                                                {shapes.map(s => (
-                                                    <button key={s.id} onClick={() => setActiveShapeId(s.id)} className={`w-full text-left p-2 rounded ${activeShapeId === s.id ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
-                                                        {s.name || '(Untitled Shape)'}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="pt-4 space-y-2">
-                                                <Input label="New Shape Name" value={newShapeName} onChange={e => setNewShapeName(e.target.value)} placeholder="e.g., ContributionShape" />
-                                                <Button onClick={handleAddShape} disabled={!newShapeName.trim()} className="w-full">Create Shape</Button>
-                                            </div>
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <ShaclShapeEditor 
-                                                shape={activeShape} 
-                                                onUpdate={handleUpdateShape}
-                                                onRemove={handleRemoveShape}
-                                                onAddConstraint={handleAddConstraint}
-                                                onUpdateConstraint={handleUpdateConstraint}
-                                                onRemoveConstraint={handleRemoveConstraint}
-                                                vocabListId="vocab-list"
-                                            />
+                                            {properties.map(prop => (
+                                                <div key={prop.id} className="grid grid-cols-11 gap-2 items-end">
+                                                    <div className="col-span-5"><Input listId="vocab-list" label="Property" value={prop.key} onChange={e => setProperties(properties.map(p => p.id === prop.id ? {...p, key: e.target.value} : p))} /></div>
+                                                    <div className="col-span-5"><Input label="Value" value={prop.value} onChange={e => setProperties(properties.map(p => p.id === prop.id ? {...p, value: e.target.value} : p))} /></div>
+                                                    <div className="col-span-1"><Button variant="danger" onClick={() => setProperties(properties.filter(p => p.id !== prop.id))}>&times;</Button></div>
+                                                </div>
+                                            ))}
+                                            <Button onClick={() => setProperties([...properties, {id: Date.now(), key: '', value: '', type: 'literal'}])}>Add Property</Button>
                                         </div>
                                     </div>
                                     <div>
@@ -688,10 +525,39 @@ export default function App() {
                                     </div>
                                 </div>
                             )}
+                            {activeTab === 'shacl' && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-1 space-y-3">
+                                        <h3 className="text-lg font-semibold text-gray-300">Defined Shapes</h3>
+                                        <div className="space-y-2">
+                                            {shapes.map(s => (
+                                                <button key={s.id} onClick={() => setActiveShapeId(s.id)} className={`w-full text-left p-2 rounded ${activeShapeId === s.id ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                                                    {s.name || '(Untitled Shape)'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="pt-4 space-y-2">
+                                            <Input label="New Shape Name" value={newShapeName} onChange={e => setNewShapeName(e.target.value)} placeholder="e.g., ContributionShape" />
+                                            <Button onClick={handleAddShape} disabled={!newShapeName.trim()} className="w-full">Create Shape</Button>
+                                        </div>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <ShaclShapeEditor 
+                                            shape={activeShape} 
+                                            onUpdate={handleUpdateShape}
+                                            onRemove={handleRemoveShape}
+                                            onAddConstraint={handleAddConstraint}
+                                            onUpdateConstraint={handleUpdateConstraint}
+                                            onRemoveConstraint={handleRemoveConstraint}
+                                            vocabListId="vocab-list"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                             {activeTab === 'ontologies' && (
                                 <div className="space-y-3">
                                     <h3 className="text-xl font-semibold mb-3 text-gray-200">Available Ontologies</h3>
-                                    <p className="text-gray-400 text-sm mb-4">Select ontologies to activate their vocabulary for autocompletion.</p>
+                                    <p className="text-gray-400 text-sm">Select ontologies to activate their vocabulary for autocompletion.</p>
                                     {Object.entries(ontologiesDb).map(([key, {name, prefix}]) => (
                                         <label key={key} className="flex items-center space-x-3 p-3 bg-gray-800/50 rounded-md cursor-pointer hover:bg-gray-700/50">
                                             <input 
@@ -706,30 +572,24 @@ export default function App() {
                                 </div>
                             )}
                             {activeTab === 'namespaces' && (
-                                <div className="space-y-4">
+                                <div className="space-y-2">
                                     {prefixes.map(p => (
-                                        <div key={p.id} className="grid grid-cols-12 gap-2 items-center">
-                                            <div className="col-span-3"><Input label="Prefix" value={p.prefix} onChange={e => setPrefixes(prefixes.map(pr => pr.id === p.id ? {...pr, prefix: e.target.value} : pr))} /></div>
-                                            <div className="col-span-5"><Input label="URI" value={p.uri} onChange={e => setPrefixes(prefixes.map(pr => pr.id === p.id ? {...pr, uri: e.target.value} : pr))} /></div>
-                                            <div className="col-span-1 text-2xl text-center">
-                                                {p.status === 'valid' && <span title="Valid" className="text-green-500">✓</span>}
-                                                {p.status === 'invalid' && <span title="Invalid" className="text-red-500">✗</span>}
-                                                {p.status === 'validating' && <span title="Validating..." className="text-yellow-500">...</span>}
-                                            </div>
-                                            <div className="col-span-2 flex items-end h-full"><Button variant="secondary" onClick={() => handleValidatePrefix(p.id)}>Validate</Button></div>
+                                        <div key={p.id} className="grid grid-cols-11 gap-2 items-center">
+                                            <div className="col-span-4"><Input label="Prefix" value={p.prefix} onChange={e => setPrefixes(prefixes.map(pr => pr.id === p.id ? {...pr, prefix: e.target.value} : pr))} /></div>
+                                            <div className="col-span-6"><Input label="URI" value={p.uri} onChange={e => setPrefixes(prefixes.map(pr => pr.id === p.id ? {...pr, uri: e.target.value} : pr))} /></div>
                                             <div className="col-span-1 flex items-end h-full"><Button variant="danger" onClick={() => setPrefixes(prefixes.filter(pr => pr.id !== p.id))}>&times;</Button></div>
                                         </div>
                                     ))}
-                                    <Button onClick={() => setPrefixes([...prefixes, {id: Date.now(), prefix: '', uri: '', status: 'unvalidated'}])} variant="secondary" className="mt-4">Add Namespace</Button>
+                                    <Button onClick={() => setPrefixes([...prefixes, {id: Date.now(), prefix: '', uri: ''}])} variant="secondary" className="mt-4">Add Prefix</Button>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* OUTPUT PANELS */}
+                    {/* RIGHT COLUMN: OUTPUT & PUBLISH */}
                     <div className="space-y-8">
                         <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
-                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Generated RDF (Turtle)</h2>
+                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">5. Generated RDF (Turtle)</h2>
                             <div className="relative">
                                 <pre className="bg-gray-900 text-green-300 p-4 rounded-md overflow-x-auto h-96 whitespace-pre-wrap font-mono text-sm leading-relaxed">
                                     <code>{rdfOutput}</code>
@@ -741,7 +601,7 @@ export default function App() {
                         </div>
 
                         <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
-                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Publish to IPFS</h2>
+                            <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">6. Publish to IPFS</h2>
                             <div className="space-y-4">
                                 <Input label="IPFS API URL" value={ipfsApiUrl} onChange={e => setIpfsApiUrl(e.target.value)} />
                                 <div className="text-xs text-gray-500">
@@ -762,7 +622,7 @@ export default function App() {
                         
                         {ipfsCid && (
                              <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
-                                <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">Launch on eCash</h2>
+                                <h2 className="text-2xl font-semibold mb-4 border-b border-gray-700 pb-2">7. Launch on eCash</h2>
                                 <p className="text-gray-400 mb-4">Use the following parameters to create your token in a wallet like Cashtab.</p>
                                 <div className="space-y-4">
                                     <div>
@@ -803,6 +663,7 @@ export default function App() {
                                 </div>
                             </div>
                         )}
+
                     </div>
                 </div>
             </div>
